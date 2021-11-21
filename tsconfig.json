@@ -1,5 +1,8 @@
 {
+	"extends": "@bluelovers/tsconfig/esm/mapfile.json",
 	"compilerOptions": {
+		"esModuleInterop": false,
+		"importHelpers": true,
 		"composite": true,
 		"incremental": true
 	},

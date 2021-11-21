@@ -1,14 +1,13 @@
 {
+	"extends": "@bluelovers/tsconfig/esm/mapfile.json",
 	"compilerOptions": {
-		"declaration": true,
-		"lib": ["es2015"],
-		"newLine": "LF",
+		"esModuleInterop": false,
+		"importHelpers": true,
 		"noEmitOnError": true,
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitReturns": true,
 		"noUnusedLocals": true,
 		"strict": true,
-		"stripInternal": true,
-		"target": "es5"
+		"stripInternal": true
 	}
 }

@@ -10,3 +10,7 @@ package-lock.json.*
 
 *.tsbuildinfo
 config-schema.d.ts
+!/dist/
+!/dts-out/
+*.map
+
