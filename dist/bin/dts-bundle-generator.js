@@ -135,6 +135,7 @@ function generateOutFileName(inputFilePath) {
 }
 // eslint-disable-next-line complexity
 function main() {
+    var _a;
     const args = parseArgs();
     if (args.silent && args.verbose) {
         throw new Error('Cannot use both silent and verbose options at the same time');
@@ -191,7 +192,7 @@ function main() {
     const outFilesToCheck = [];
     for (let i = 0; i < bundlerConfig.entries.length; ++i) {
         const entry = bundlerConfig.entries[i];
-        const outFile = entry.outFile !== undefined ? entry.outFile : generateOutFileName(entry.filePath);
+        const outFile = (_a = entry.outFile) !== null && _a !== void 0 ? _a : generateOutFileName(entry.filePath);
         (0, logger_1.normalLog)(`Writing ${entry.filePath} -> ${outFile}`);
         ts.sys.writeFile(outFile, generatedDts[i]);
         if (!entry.noCheck) {

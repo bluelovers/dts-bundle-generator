@@ -234,7 +234,7 @@ function main(): void {
 	const outFilesToCheck: string[] = [];
 	for (let i = 0; i < bundlerConfig.entries.length; ++i) {
 		const entry = bundlerConfig.entries[i];
-		const outFile = entry.outFile !== undefined ? entry.outFile : generateOutFileName(entry.filePath);
+		const outFile = entry.outFile ?? generateOutFileName(entry.filePath);
 
 		normalLog(`Writing ${entry.filePath} -> ${outFile}`);
 		ts.sys.writeFile(outFile, generatedDts[i]);
