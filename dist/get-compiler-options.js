@@ -4,7 +4,6 @@ exports.getCompilerOptions = void 0;
 const ts = require("typescript");
 const path = require("path");
 const get_absolute_path_1 = require("./helpers/get-absolute-path");
-const fix_path_1 = require("./helpers/fix-path");
 const check_diagnostics_errors_1 = require("./helpers/check-diagnostics-errors");
 const logger_1 = require("./logger");
 var Constants;
@@ -26,7 +25,7 @@ function getCompilerOptions(inputFileNames, preferredConfigPath) {
     // we don't want to raise an error if no inputs found in a config file
     // because this error is mostly for CLI, but we'll pass an inputs in createProgram
     const diagnostics = compilerOptionsParseResult.errors
-        .filter((d) => d.code !== 18003 /* NoInputsWereFoundDiagnosticCode */);
+        .filter((d) => d.code !== 18003 /* Constants.NoInputsWereFoundDiagnosticCode */);
     (0, check_diagnostics_errors_1.checkDiagnosticsErrors)(diagnostics, 'Error while processing tsconfig compiler options');
     return compilerOptionsParseResult.options;
 }
@@ -35,7 +34,10 @@ function findConfig(inputFiles) {
     if (inputFiles.length !== 1) {
         throw new Error('Cannot find tsconfig for multiple files. Please specify preferred tsconfig file');
     }
-    const searchPath = (0, fix_path_1.fixPath)(path.resolve(inputFiles[0]));
+    // input file could be a relative path to the current path
+    // and desired config could be outside of current cwd folder
+    // so we have to provide absolute path to find config until the root
+    const searchPath = (0, get_absolute_path_1.getAbsolutePath)(inputFiles[0]);
     const configFileName = ts.findConfigFile(searchPath, ts.sys.fileExists);
     if (!configFileName) {
         throw new Error(`Cannot find config file for file ${searchPath}`);

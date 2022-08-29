@@ -1,9 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isNamedTupleMember = exports.getExportsForStatement = exports.resolveIdentifier = exports.getExportsForSourceFile = exports.ExportType = exports.isDeclarationFromExternalModule = exports.getDeclarationsForSymbol = exports.isNamespaceStatement = exports.isDeclareGlobalStatement = exports.isRelativeDeclareModule = exports.isDeclareModule = exports.isAmbientModule = exports.splitTransientSymbol = exports.getDeclarationNameSymbol = exports.getActualSymbol = exports.hasNodeModifier = exports.isNodeNamedDeclaration = void 0;
+exports.isNamedTupleMember = exports.getExportsForStatement = exports.resolveIdentifier = exports.getExportsForSourceFile = exports.ExportType = exports.getDeclarationsForSymbol = exports.isNamespaceStatement = exports.isDeclareGlobalStatement = exports.isDeclareModule = exports.isAmbientModule = exports.splitTransientSymbol = exports.getDeclarationNameSymbol = exports.getActualSymbol = exports.getNodeName = exports.hasNodeModifier = exports.isNodeNamedDeclaration = void 0;
 const ts = require("typescript");
-const fix_path_1 = require("./fix-path");
-const node_modules_1 = require("./node-modules");
 const namedDeclarationKinds = [
     ts.SyntaxKind.InterfaceDeclaration,
     ts.SyntaxKind.ClassDeclaration,
@@ -22,6 +20,18 @@ function hasNodeModifier(node, modifier) {
     return Boolean(node.modifiers && node.modifiers.some((nodeModifier) => nodeModifier.kind === modifier));
 }
 exports.hasNodeModifier = hasNodeModifier;
+function getNodeName(node) {
+    var _a;
+    const nodeName = node.name;
+    if (nodeName === undefined) {
+        const defaultModifier = (_a = node.modifiers) === null || _a === void 0 ? void 0 : _a.find((mod) => mod.kind === ts.SyntaxKind.DefaultKeyword);
+        if (defaultModifier !== undefined) {
+            return defaultModifier;
+        }
+    }
+    return nodeName;
+}
+exports.getNodeName = getNodeName;
 function getActualSymbol(symbol, typeChecker) {
     if (symbol.flags & ts.SymbolFlags.Alias) {
         symbol = typeChecker.getAliasedSymbol(symbol);
@@ -87,19 +97,6 @@ function isDeclareModule(node) {
 }
 exports.isDeclareModule = isDeclareModule;
 /**
- * Returns whether a node is `declare module` ModuleDeclaration with a relative path
- */
-function isRelativeDeclareModule(node) {
-    // `declare module ""`, `declare global` and `namespace {}` are ModuleDeclaration
-    // but here we need to check only `declare module` statements
-    if (!isDeclareModule(node) || !ts.isStringLiteral(node.name)) {
-        return false;
-    }
-    const moduleName = (0, fix_path_1.fixPath)(node.name.text);
-    return moduleName.startsWith('./') || moduleName.startsWith('../');
-}
-exports.isRelativeDeclareModule = isRelativeDeclareModule;
-/**
  * Returns whether statement is `declare global` ModuleDeclaration
  */
 function isDeclareGlobalStatement(statement) {
@@ -132,11 +129,6 @@ function getDeclarationsForSymbol(symbol) {
     return result;
 }
 exports.getDeclarationsForSymbol = getDeclarationsForSymbol;
-function isDeclarationFromExternalModule(node) {
-    console.dir(node);
-    return (0, node_modules_1.getLibraryName)(node.getSourceFile().fileName) !== null;
-}
-exports.isDeclarationFromExternalModule = isDeclarationFromExternalModule;
 var ExportType;
 (function (ExportType) {
     ExportType[ExportType["CommonJS"] = 0] = "CommonJS";
@@ -151,7 +143,7 @@ function getExportsForSourceFile(typeChecker, sourceFileSymbol) {
             return [
                 {
                     symbol,
-                    type: 0 /* CommonJS */,
+                    type: 0 /* ExportType.CommonJS */,
                     exportedName: '',
                     originalName: symbol.escapedName,
                 },
@@ -160,20 +152,20 @@ function getExportsForSourceFile(typeChecker, sourceFileSymbol) {
     }
     const result = typeChecker
         .getExportsOfModule(sourceFileSymbol)
-        .map((symbol) => ({ symbol, exportedName: symbol.escapedName, type: 1 /* ES6Named */, originalName: '' }));
+        .map((symbol) => ({ symbol, exportedName: symbol.escapedName, type: 1 /* ExportType.ES6Named */, originalName: '' }));
     if (sourceFileSymbol.exports !== undefined) {
         const defaultExportSymbol = sourceFileSymbol.exports.get(ts.InternalSymbolName.Default);
         if (defaultExportSymbol !== undefined) {
             const defaultExport = result.find((exp) => exp.symbol === defaultExportSymbol);
             if (defaultExport !== undefined) {
-                defaultExport.type = 2 /* ES6Default */;
+                defaultExport.type = 2 /* ExportType.ES6Default */;
             }
             else {
                 // it seems that default export is always returned by getExportsOfModule
                 // but let's add it to be sure add if there is no such export
                 result.push({
                     symbol: defaultExportSymbol,
-                    type: 2 /* ES6Default */,
+                    type: 2 /* ExportType.ES6Default */,
                     exportedName: 'default',
                     originalName: '',
                 });
@@ -214,9 +206,10 @@ function getExportsForStatement(exportedSymbols, typeChecker, statement) {
         }
         const firstDeclarationExports = getExportsForName(exportedSymbols, typeChecker, statement.declarationList.declarations[0].name);
         const allDeclarationsHaveSameExportType = statement.declarationList.declarations.every((variableDecl) => {
+            var _a, _b;
             // all declaration should have the same export type
             // TODO: for now it's not supported to have different type of exports
-            return getExportsForName(exportedSymbols, typeChecker, variableDecl.name)[0] === firstDeclarationExports[0];
+            return ((_a = getExportsForName(exportedSymbols, typeChecker, variableDecl.name)[0]) === null || _a === void 0 ? void 0 : _a.type) === ((_b = firstDeclarationExports[0]) === null || _b === void 0 ? void 0 : _b.type);
         });
         if (!allDeclarationsHaveSameExportType) {
             // log warn?
@@ -224,13 +217,14 @@ function getExportsForStatement(exportedSymbols, typeChecker, statement) {
         }
         return firstDeclarationExports;
     }
-    return getExportsForName(exportedSymbols, typeChecker, statement.name);
+    const nodeName = getNodeName(statement);
+    if (nodeName === undefined) {
+        return [];
+    }
+    return getExportsForName(exportedSymbols, typeChecker, nodeName);
 }
 exports.getExportsForStatement = getExportsForStatement;
 function getExportsForName(exportedSymbols, typeChecker, name) {
-    if (name === undefined) {
-        return [];
-    }
     if (ts.isArrayBindingPattern(name) || ts.isObjectBindingPattern(name)) {
         // TODO: binding patterns in variable declarations are not supported for now
         // see https://github.com/microsoft/TypeScript/issues/30598 also

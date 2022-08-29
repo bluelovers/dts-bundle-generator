@@ -33,19 +33,19 @@ function getModuleInfoImpl(currentFilePath, originalFileName, criteria) {
                 }
             }
         }
-        return { type: 0 /* ShouldBeInlined */, fileName: originalFileName, isExternal: false };
+        return { type: 0 /* ModuleType.ShouldBeInlined */, fileName: originalFileName, isExternal: false };
     }
     const typesLibraryName = (0, node_modules_1.getTypesLibraryName)(currentFilePath);
     if (shouldLibraryBeInlined(npmLibraryName, typesLibraryName, criteria.inlinedLibraries)) {
-        return { type: 0 /* ShouldBeInlined */, fileName: originalFileName, isExternal: true };
+        return { type: 0 /* ModuleType.ShouldBeInlined */, fileName: originalFileName, isExternal: true };
     }
     if (shouldLibraryBeImported(npmLibraryName, typesLibraryName, criteria.importedLibraries, criteria.allowedTypesLibraries)) {
-        return { type: 1 /* ShouldBeImported */, fileName: originalFileName, isExternal: true };
+        return { type: 1 /* ModuleType.ShouldBeImported */, fileName: originalFileName, isExternal: true };
     }
     if (typesLibraryName !== null && isLibraryAllowed(typesLibraryName, criteria.allowedTypesLibraries)) {
-        return { type: 2 /* ShouldBeReferencedAsTypes */, fileName: originalFileName, typesLibraryName, isExternal: true };
+        return { type: 2 /* ModuleType.ShouldBeReferencedAsTypes */, fileName: originalFileName, typesLibraryName, isExternal: true };
     }
-    return { type: 3 /* ShouldBeUsedForModulesOnly */, fileName: originalFileName, isExternal: true };
+    return { type: 3 /* ModuleType.ShouldBeUsedForModulesOnly */, fileName: originalFileName, isExternal: true };
 }
 function shouldLibraryBeInlined(npmLibraryName, typesLibraryName, inlinedLibraries) {
     return isLibraryAllowed(npmLibraryName, inlinedLibraries) || typesLibraryName !== null && isLibraryAllowed(typesLibraryName, inlinedLibraries);

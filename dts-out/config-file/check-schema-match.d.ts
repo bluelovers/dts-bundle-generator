@@ -4,7 +4,7 @@ export interface PrimitiveValues {
     string: '';
     requiredString: 'REQUIRED';
 }
-export declare type SchemeDescriptor<T> = {
+export type SchemeDescriptor<T> = {
     [P in keyof T]-?: T[P] extends unknown[] ? [SchemeDescriptor<T[P][number]>] : SchemeDescriptor<T[P]>;
 };
 export declare const schemaPrimitiveValues: Readonly<PrimitiveValues>;

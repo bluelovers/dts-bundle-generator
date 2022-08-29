@@ -41,7 +41,7 @@ class TypesUsageEvaluator {
         }
     }
     computeUsageForNode(node) {
-        if ((0, typescript_1.isRelativeDeclareModule)(node) && node.body !== undefined && ts.isModuleBlock(node.body)) {
+        if ((0, typescript_1.isDeclareModule)(node) && node.body !== undefined && ts.isModuleBlock(node.body)) {
             for (const statement of node.body.statements) {
                 this.computeUsageForNode(statement);
             }

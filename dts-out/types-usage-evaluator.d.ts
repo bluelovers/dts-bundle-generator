@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-export declare type NodesParents = Map<ts.Symbol, Set<ts.Symbol>>;
+export type NodesParents = Map<ts.Symbol, Set<ts.Symbol>>;
 export declare class TypesUsageEvaluator {
     private readonly typeChecker;
     private readonly nodesParentsMap;

@@ -24,7 +24,7 @@ export interface UsedForModulesModuleInfo extends UsedModuleInfoCommon {
     type: ModuleType.ShouldBeUsedForModulesOnly;
     isExternal: true;
 }
-export declare type ModuleInfo = InlinedModuleInfo | ImportedModuleInfo | ReferencedModuleInfo | UsedForModulesModuleInfo;
+export type ModuleInfo = InlinedModuleInfo | ImportedModuleInfo | ReferencedModuleInfo | UsedForModulesModuleInfo;
 export interface ModuleCriteria {
     inlinedLibraries: string[];
     importedLibraries: string[] | undefined;
