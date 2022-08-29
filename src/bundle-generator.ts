@@ -4,6 +4,7 @@ import * as path from 'path';
 import { compileDts } from './compile-dts';
 import { TypesUsageEvaluator } from './types-usage-evaluator';
 import {
+	getNodeName,
 	getActualSymbol,
 	getDeclarationNameSymbol,
 	getDeclarationsForSymbol,
@@ -11,7 +12,6 @@ import {
 	getExportsForStatement,
 	hasNodeModifier,
 	isAmbientModule,
-	isDeclarationFromExternalModule,
 	isDeclareGlobalStatement,
 	isDeclareModule,
 	isNamespaceStatement,
@@ -191,12 +191,19 @@ export function generateDtsBundle(entries: readonly EntryPointConfig[], options:
 					rootFileExportSymbols,
 					typesUsageEvaluator,
 					typeChecker,
-					program.isSourceFileDefaultLibrary.bind(program)
+					program.isSourceFileDefaultLibrary.bind(program),
+					criteria
 				);
 			},
 			shouldDeclareGlobalBeInlined: (currentModule: ModuleInfo) => Boolean(outputOptions.inlineDeclareGlobals) && currentModule.type === ModuleType.ShouldBeInlined,
 			shouldDeclareExternalModuleBeInlined: () => Boolean(outputOptions.inlineDeclareExternals),
-			getModuleInfo: (fileName: string) => getModuleInfo(fileName, criteria),
+			getModuleInfo: (fileNameOrModuleLike: string | ts.SourceFile | ts.ModuleDeclaration) => {
+				if (typeof fileNameOrModuleLike !== 'string') {
+					return getModuleLikeInfo(fileNameOrModuleLike, criteria);
+				}
+
+				return getModuleInfo(fileNameOrModuleLike, criteria);
+			},
 			resolveIdentifier: (identifier: ts.Identifier) => resolveIdentifier(typeChecker, identifier),
 			getDeclarationsForExportedAssignment: (exportAssignment: ts.ExportAssignment) => {
 				const symbolForExpression = typeChecker.getSymbolAtLocation(exportAssignment.expression);
@@ -208,13 +215,41 @@ export function generateDtsBundle(entries: readonly EntryPointConfig[], options:
 				return getDeclarationsForSymbol(symbol);
 			},
 			getDeclarationUsagesSourceFiles: (declaration: ts.NamedDeclaration) => {
-				return getDeclarationUsagesSourceFiles(declaration, rootFileExportSymbols, typesUsageEvaluator, typeChecker);
+				return getDeclarationUsagesSourceFiles(
+					declaration,
+					rootFileExportSymbols,
+					typesUsageEvaluator,
+					typeChecker,
+					criteria
+				);
 			},
 			areDeclarationSame: (left: ts.NamedDeclaration, right: ts.NamedDeclaration) => {
 				const leftSymbols = splitTransientSymbol(getNodeSymbol(left, typeChecker) as ts.Symbol, typeChecker);
 				const rightSymbols = splitTransientSymbol(getNodeSymbol(right, typeChecker) as ts.Symbol, typeChecker);
 
 				return leftSymbols.some((leftSymbol: ts.Symbol) => rightSymbols.includes(leftSymbol));
+			},
+			resolveReferencedModule: (node: ts.ExportDeclaration | ts.ModuleDeclaration) => {
+				const moduleName = ts.isExportDeclaration(node) ? node.moduleSpecifier : node.name;
+				if (moduleName === undefined) {
+					return null;
+				}
+
+				const moduleSymbol = typeChecker.getSymbolAtLocation(moduleName);
+				if (moduleSymbol === undefined) {
+					return null;
+				}
+
+				const symbol = getActualSymbol(moduleSymbol, typeChecker);
+				if (symbol.valueDeclaration === undefined) {
+					return null;
+				}
+
+				if (ts.isSourceFile(symbol.valueDeclaration) || ts.isModuleDeclaration(symbol.valueDeclaration)) {
+					return symbol.valueDeclaration;
+				}
+
+				return null;
 			},
 		};
 
@@ -258,30 +293,25 @@ export function generateDtsBundle(entries: readonly EntryPointConfig[], options:
 				...collectionResult,
 				needStripDefaultKeywordForStatement: (statement: ts.Statement) => {
 					const statementExports = getExportsForStatement(rootFileExports, typeChecker, statement);
-
-					// if true - no direct export was found
-					// that means that node might have an export keyword (like interface, type, etc)
-					// otherwise, if there are only re-exports with renaming (like export { foo as bar })
-					// we don't need to put export keyword for this statement
-					// because we'll re-export it in the way
-					return statementExports.find((exp: SourceFileExport) => exp.exportedName === 'default') === undefined;
+					// a statement should have a 'default' keyword only if it it declared in the root source file
+					// otherwise it will be re-exported via `export { name as default }`
+					const defaultExport = statementExports.find((exp: SourceFileExport) => exp.exportedName === 'default');
+					return defaultExport === undefined || defaultExport.originalName !== 'default' && statement.getSourceFile() !== rootSourceFile;
 				},
-
 				shouldStatementHasExportKeyword: (statement: ts.Statement) => {
 					const statementExports = getExportsForStatement(rootFileExports, typeChecker, statement);
 
-					// if true - no direct export was found
-					// that means that node might have an export keyword (like interface, type, etc)
-					// otherwise, if there are only re-exports with renaming (like export { foo as bar })
-					// we don't need to put export keyword for this statement
-					// because we'll re-export it in the way
+					// If true, then no direct export was found. That means that node might have
+					// an export keyword (like interface, type, etc) otherwise, if there are
+					// only re-exports with renaming (like export { foo as bar }) we don't need
+					// to put export keyword for this statement because we'll re-export it in the way
 					const hasStatementedDefaultKeyword = hasNodeModifier(statement, ts.SyntaxKind.DefaultKeyword);
 					let result = statementExports.length === 0 || statementExports.find((exp: SourceFileExport) => {
 						// "directly" means "without renaming" or "without additional node/statement"
 						// for instance, `class A {} export default A;` - here `statement` is `class A {}`
 						// it's default exported by `export default A;`, but class' statement itself doesn't have `export` keyword
 						// so we shouldn't add this either
-						const shouldBeDefaultExportedDirectly = exp.exportedName === 'default' && hasStatementedDefaultKeyword;
+						const shouldBeDefaultExportedDirectly = exp.exportedName === 'default' && hasStatementedDefaultKeyword && statement.getSourceFile() === rootSourceFile;
 						return shouldBeDefaultExportedDirectly || exp.exportedName === exp.originalName;
 					}) !== undefined;
 
@@ -354,15 +384,16 @@ interface UpdateParams {
 	shouldStatementBeImported(statement: ts.DeclarationStatement): boolean;
 	shouldDeclareGlobalBeInlined(currentModule: ModuleInfo, statement: ts.ModuleDeclaration): boolean;
 	shouldDeclareExternalModuleBeInlined(): boolean;
-	getModuleInfo(fileName: string): ModuleInfo;
+	getModuleInfo(fileName: string | ts.SourceFile | ts.ModuleDeclaration): ModuleInfo;
 	/**
 	 * Returns original name which is referenced by passed identifier.
 	 * Could be used to resolve "default" identifier in exports.
 	 */
 	resolveIdentifier(identifier: ts.NamedDeclaration['name']): ts.NamedDeclaration['name'];
 	getDeclarationsForExportedAssignment(exportAssignment: ts.ExportAssignment): ts.Declaration[];
-	getDeclarationUsagesSourceFiles(declaration: ts.NamedDeclaration): Set<ts.SourceFile>;
+	getDeclarationUsagesSourceFiles(declaration: ts.NamedDeclaration): Set<ts.SourceFile | ts.ModuleDeclaration>;
 	areDeclarationSame(a: ts.NamedDeclaration, b: ts.NamedDeclaration): boolean;
+	resolveReferencedModule(node: ts.ExportDeclaration | ts.ModuleDeclaration): ts.SourceFile | ts.ModuleDeclaration | null;
 }
 
 const skippedNodes = [
@@ -422,62 +453,59 @@ function updateResult(params: UpdateParams, result: CollectingResult): void {
 // eslint-disable-next-line complexity
 function updateResultForRootSourceFile(params: UpdateParams, result: CollectingResult): void {
 	function isReExportFromImportableModule(statement: ts.Statement): boolean {
-		if (!ts.isExportDeclaration(statement) || statement.moduleSpecifier === undefined || !ts.isStringLiteral(statement.moduleSpecifier)) {
+		if (!ts.isExportDeclaration(statement)) {
 			return false;
 		}
 
-		const moduleFileName = resolveModuleFileName(statement.getSourceFile().fileName, statement.moduleSpecifier.text);
-		return params.getModuleInfo(moduleFileName).type === ModuleType.ShouldBeImported;
+		const resolvedModule = params.resolveReferencedModule(statement);
+		if (resolvedModule === null) {
+			return false;
+		}
+
+		return params.getModuleInfo(resolvedModule).type === ModuleType.ShouldBeImported;
 	}
 
 	updateResult(params, result);
 
 	// add skipped by `updateResult` exports
 	for (const statement of params.statements) {
-		// "export default" or "export ="
-		const isExportAssignment = ts.isExportAssignment(statement);
-		const isReExportFromImportable = isReExportFromImportableModule(statement);
-
-		if (isExportAssignment || isReExportFromImportable) {
+		// "export =" or "export {} from 'importable-package'"
+		if (ts.isExportAssignment(statement) && statement.isExportEquals || isReExportFromImportableModule(statement)) {
 			result.statements.push(statement);
+			continue;
+		}
+
+		// "export default"
+		if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
+			// `export default 123`, `export default "str"`
+			if (!ts.isIdentifier(statement.expression)) {
+				result.statements.push(statement);
+				continue;
+			}
+
+			const exportedNameNode = params.resolveIdentifier(statement.expression);
+			if (exportedNameNode === undefined) {
+				continue;
+			}
+
+			const originalName = exportedNameNode.getText();
+			result.renamedExports.push(`${originalName} as default`);
+			continue;
 		}
 
 		// export { foo, bar, baz as fooBar }
 		if (ts.isExportDeclaration(statement) && statement.exportClause !== undefined && ts.isNamedExports(statement.exportClause)) {
 			for (const exportItem of statement.exportClause.elements) {
-				if (exportItem.name.getText() === 'default' && exportItem.propertyName === undefined) {
-					// export { default }
-					// return export { /get name of exportItem.name's symbol node/ as default };
-					// it seems unnecessary?
+				const exportedNameNode = params.resolveIdentifier(exportItem.name);
+				if (exportedNameNode === undefined) {
 					continue;
 				}
 
-				// export { default as name }
-				if (exportItem.propertyName !== undefined && exportItem.propertyName.getText() === 'default') {
-					const resolvedIdentifier = params.resolveIdentifier(exportItem.propertyName);
-					const resolvedIdentifierText = resolvedIdentifier?.getText() || '';
-					const exportItemNameText = exportItem.name.getText();
+				const originalName = exportedNameNode.getText();
+				const exportedName = exportItem.name.getText();
 
-					// in case of re-export with the original name (e.g. through another module)
-					// we don't need to put that re-export to avoid duplicated identifiers error
-					if (resolvedIdentifierText !== exportItemNameText) {
-						result.renamedExports.push(`${resolvedIdentifierText} as ${exportItemNameText}`);
-					}
-
-					continue;
-				}
-
-				// export { baz as propertyName }
-				if (exportItem.propertyName !== undefined) {
-					result.renamedExports.push(exportItem.getText());
-					continue;
-				}
-
-				// export { name }
-				const resolvedIdentifier = params.resolveIdentifier(exportItem.name);
-				if (resolvedIdentifier?.getText() !== exportItem.name.getText()) {
-					// exported "name" is different from "original" name
-					result.renamedExports.push(`${resolvedIdentifier?.getText() || ''} as ${exportItem.name.getText()}`);
+				if (originalName !== exportedName) {
+					result.renamedExports.push(`${originalName} as ${exportedName}`);
 				}
 			}
 		}
@@ -512,9 +540,27 @@ function updateResultForModuleDeclaration(moduleDecl: ts.ModuleDeclaration, para
 		return;
 	}
 
-	const moduleName = moduleDecl.name.text;
-	const moduleFileName = resolveModuleFileName(params.currentModule.fileName, moduleName);
-	const moduleInfo = params.getModuleInfo(moduleFileName);
+	let moduleInfo: ModuleInfo;
+
+	if (!ts.isStringLiteral(moduleDecl.name)) {
+		// this is an old behavior of handling `declare module Name` statements
+		// where Name is a identifier, not a string literal
+		// actually in this case I'd say we need to add a statement as-is without processing
+		// but it might be a breaking change to let's not break it yet
+		const moduleFileName = resolveModuleFileName(params.currentModule.fileName, moduleDecl.name.text);
+		moduleInfo = params.getModuleInfo(moduleFileName);
+	} else {
+		const referencedModule = params.resolveReferencedModule(moduleDecl);
+		if (referencedModule === null) {
+			return;
+		}
+
+		const moduleFilePath = ts.isSourceFile(referencedModule)
+			? referencedModule.fileName
+			: resolveModuleFileName(referencedModule.getSourceFile().fileName, referencedModule.name.text);
+
+		moduleInfo = params.getModuleInfo(moduleFilePath);
+	}
 
 	// if we have declaration of external module inside internal one
 	if (!params.currentModule.isExternal && moduleInfo.isExternal) {
@@ -574,17 +620,28 @@ function updateImportsForStatement(statement: ts.Statement | ts.SourceFile, para
 	}
 }
 
+function getClosestModuleLikeNode(node: ts.Node): ts.SourceFile | ts.ModuleDeclaration {
+	while (!ts.isModuleBlock(node) && !ts.isSourceFile(node)) {
+		node = node.parent;
+	}
+
+	// we need to find a module block and return its module declaration
+	// we don't need to handle empty modules/modules with jsdoc/etc
+	return ts.isSourceFile(node) ? node : node.parent;
+}
+
 function getDeclarationUsagesSourceFiles(
 	declaration: ts.NamedDeclaration,
 	rootFileExports: readonly ts.Symbol[],
 	typesUsageEvaluator: TypesUsageEvaluator,
-	typeChecker: ts.TypeChecker
-): Set<ts.SourceFile> {
+	typeChecker: ts.TypeChecker,
+	criteria: ModuleCriteria
+): Set<ts.SourceFile | ts.ModuleDeclaration> {
 	return new Set(
-		getExportedSymbolsUsingStatement(declaration, rootFileExports, typesUsageEvaluator, typeChecker)
+		getExportedSymbolsUsingStatement(declaration, rootFileExports, typesUsageEvaluator, typeChecker, criteria)
 			.map((symbol: ts.Symbol) => getDeclarationsForSymbol(symbol))
 			.reduce((acc: ts.Declaration[], val: ts.Declaration[]) => acc.concat(val), [])
-			.map((decl: ts.Declaration) => decl.getSourceFile())
+			.map(getClosestModuleLikeNode)
 	);
 }
 
@@ -615,8 +672,12 @@ function addImport(statement: ts.DeclarationStatement, params: UpdateParams, imp
 		throw new Error(`Import/usage unnamed declaration: ${statement.getText()}`);
 	}
 
-	params.getDeclarationUsagesSourceFiles(statement).forEach((sourceFile: ts.SourceFile) => {
-		sourceFile.statements.forEach((st: ts.Statement) => {
+	params.getDeclarationUsagesSourceFiles(statement).forEach((sourceFile: ts.SourceFile | ts.ModuleDeclaration) => {
+		const statements = ts.isSourceFile(sourceFile)
+			? sourceFile.statements
+			: (sourceFile.body as ts.ModuleBlock).statements;
+
+		statements.forEach((st: ts.Statement) => {
 			if (!ts.isImportEqualsDeclaration(st) && !ts.isImportDeclaration(st)) {
 				return;
 			}
@@ -652,12 +713,25 @@ function addImport(statement: ts.DeclarationStatement, params: UpdateParams, imp
 				importItem.defaultImports.add(importClause.name.text);
 			}
 
+			interface ImportSpecifierInternal extends ts.ImportSpecifier {
+				// fallback to support TS versions without type-only imports/exports
+				isTypeOnly: boolean;
+			}
+
 			if (importClause.namedBindings !== undefined) {
 				if (ts.isNamedImports(importClause.namedBindings)) {
 					// import { El1, El2 } from 'module';
 					importClause.namedBindings.elements
 						.filter(params.areDeclarationSame.bind(params, statement))
-						.forEach((specifier: ts.ImportSpecifier) => (importItem as ModuleImportsSet).namedImports.add(specifier.getText()));
+						.forEach((specifier: ts.ImportSpecifier) => {
+							let importName = specifier.getText();
+							if ((specifier as ImportSpecifierInternal).isTypeOnly) {
+								// let's fallback all the imports to ones without "type" specifier
+								importName = importName.replace(/^(\s*type\s+)/g, '');
+							}
+
+							(importItem as ModuleImportsSet).namedImports.add(importName);
+						});
 				} else {
 					// import * as name from 'module';
 					importItem.starImports.add(importClause.namedBindings.name.getText());
@@ -707,7 +781,8 @@ function shouldNodeBeImported(
 	rootFileExports: readonly ts.Symbol[],
 	typesUsageEvaluator: TypesUsageEvaluator,
 	typeChecker: ts.TypeChecker,
-	isDefaultLibrary: (sourceFile: ts.SourceFile) => boolean
+	isDefaultLibrary: (sourceFile: ts.SourceFile) => boolean,
+	criteria: ModuleCriteria
 ): boolean {
 	const nodeSymbol = getNodeSymbol(node, typeChecker);
 	if (nodeSymbol === null) {
@@ -734,14 +809,21 @@ function shouldNodeBeImported(
 		return false;
 	}
 
-	return getExportedSymbolsUsingStatement(node, rootFileExports, typesUsageEvaluator, typeChecker).length !== 0;
+	return getExportedSymbolsUsingStatement(
+		node,
+		rootFileExports,
+		typesUsageEvaluator,
+		typeChecker,
+		criteria
+	).length !== 0;
 }
 
 function getExportedSymbolsUsingStatement(
 	node: ts.NamedDeclaration,
 	rootFileExports: readonly ts.Symbol[],
 	typesUsageEvaluator: TypesUsageEvaluator,
-	typeChecker: ts.TypeChecker
+	typeChecker: ts.TypeChecker,
+	criteria: ModuleCriteria
 ): readonly ts.Symbol[] {
 	const nodeSymbol = getNodeSymbol(node, typeChecker);
 	if (nodeSymbol === null) {
@@ -756,7 +838,10 @@ function getExportedSymbolsUsingStatement(
 	// we should import only symbols which are used in types directly
 	return Array.from(symbolsUsingNode).filter((symbol: ts.Symbol) => {
 		const symbolsDeclarations = getDeclarationsForSymbol(symbol);
-		if (symbolsDeclarations.length === 0 || symbolsDeclarations.every(isDeclarationFromExternalModule)) {
+		if (symbolsDeclarations.length === 0 || symbolsDeclarations.every((decl: ts.Declaration) => {
+			// we need to make sure that at least 1 declaration is inlined
+			return getModuleLikeInfo(getClosestModuleLikeNode(decl), criteria).type !== ModuleType.ShouldBeInlined;
+		})) {
 			return false;
 		}
 
@@ -765,10 +850,18 @@ function getExportedSymbolsUsingStatement(
 }
 
 function getNodeSymbol(node: ts.Node, typeChecker: ts.TypeChecker): ts.Symbol | null {
-	const nodeName = (node as unknown as ts.NamedDeclaration).name;
+	const nodeName = getNodeName(node);
 	if (nodeName === undefined) {
 		return null;
 	}
 
 	return getDeclarationNameSymbol(nodeName, typeChecker);
+}
+
+function getModuleLikeInfo(moduleLike: ts.SourceFile | ts.ModuleDeclaration, criteria: ModuleCriteria): ModuleInfo {
+	const fileName = ts.isSourceFile(moduleLike)
+		? moduleLike.fileName
+		: resolveModuleFileName(moduleLike.getSourceFile().fileName, moduleLike.name.text);
+
+	return getModuleInfo(fileName, criteria);
 }

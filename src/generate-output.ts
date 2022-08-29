@@ -119,7 +119,7 @@ function prettifyStatementsText(statementsText: string, helpers: OutputHelpers):
 						return ts.createTypeQueryNode(node.qualifier);
 					}
 
-					return node.qualifier;
+					return ts.createTypeReferenceNode(node.qualifier, node.typeArguments);
 				}
 
 				return node;
@@ -141,10 +141,10 @@ function compareStatementText(a: StatementText, b: StatementText): number {
 }
 
 function needAddDeclareKeyword(statement: ts.Statement, nodeText: string): boolean {
-	// for some reason TypeScript allows to do not write `declare` keyword for ClassDeclaration, FunctionDeclaration and VariableDeclaration
+	// for some reason TypeScript allows to not write `declare` keyword for ClassDeclaration, FunctionDeclaration and VariableDeclaration
 	// if it already has `export` keyword - so we need to add it
 	// to avoid TS1046: Top-level declarations in .d.ts files must start with either a 'declare' or 'export' modifier.
-	if (ts.isClassDeclaration(statement) && /^class\b/.test(nodeText)) {
+	if (ts.isClassDeclaration(statement) && (/^class\b/.test(nodeText) || /^abstract\b/.test(nodeText))) {
 		return true;
 	}
 
@@ -153,6 +153,10 @@ function needAddDeclareKeyword(statement: ts.Statement, nodeText: string): boole
 	}
 
 	if (ts.isVariableStatement(statement) && /^(const|let|var)\b/.test(nodeText)) {
+		return true;
+	}
+
+	if (ts.isEnumDeclaration(statement) && (/^(const)\b/.test(nodeText) || /^(enum)\b/.test(nodeText))) {
 		return true;
 	}
 

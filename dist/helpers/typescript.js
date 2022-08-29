@@ -133,6 +133,7 @@ function getDeclarationsForSymbol(symbol) {
 }
 exports.getDeclarationsForSymbol = getDeclarationsForSymbol;
 function isDeclarationFromExternalModule(node) {
+    console.dir(node);
     return (0, node_modules_1.getLibraryName)(node.getSourceFile().fileName) !== null;
 }
 exports.isDeclarationFromExternalModule = isDeclarationFromExternalModule;
