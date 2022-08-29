@@ -1,5 +1,8 @@
 {
-  "private": true,
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "name": "@bluelovers/dts-bundle-generator",
   "version": "6.12.0",
   "description": "DTS Bundle Generator",
