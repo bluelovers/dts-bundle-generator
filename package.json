@@ -18,7 +18,6 @@
   "homepage": "https://github.com/timocov/dts-bundle-generator",
   "dependencies": {
     "tslib": "^2",
-    "typescript": ">=3.0.1",
     "yargs": "^17.5.1"
   },
   "devDependencies": {
@@ -37,6 +36,9 @@
     "rimraf": "^3.0.2",
     "ts-compiler": "npm:typescript@next",
     "ts-node": "^10.9.1"
+  },
+  "peerDependencies": {
+    "typescript": ">=3.0.1"
   },
   "license": "MIT",
   "readme": "README.md",
