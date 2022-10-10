@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getCompilerOptions = void 0;
+// @ts-ignore
 const ts = require("typescript");
 const path = require("path");
 const get_absolute_path_1 = require("./helpers/get-absolute-path");
@@ -17,10 +18,17 @@ const parseConfigHost = {
     readFile: ts.sys.readFile,
 };
 function getCompilerOptions(inputFileNames, preferredConfigPath) {
+    var _a;
+    var _b;
     const configFileName = preferredConfigPath !== undefined ? preferredConfigPath : findConfig(inputFileNames);
     (0, logger_1.verboseLog)(`Using config: ${configFileName}`);
     const configParseResult = ts.readConfigFile(configFileName, ts.sys.readFile);
     (0, check_diagnostics_errors_1.checkDiagnosticsErrors)(configParseResult.error !== undefined ? [configParseResult.error] : [], 'Error while processing tsconfig file');
+    (_a = (_b = configParseResult.config).include) !== null && _a !== void 0 ? _a : (_b.include = []);
+    configParseResult.config.include = [
+        configParseResult.config.include,
+        inputFileNames,
+    ].flat().filter(v => (v !== null && v !== void 0 ? v : false) !== false);
     const compilerOptionsParseResult = ts.parseJsonConfigFileContent(configParseResult.config, parseConfigHost, path.resolve(path.dirname(configFileName)), undefined, (0, get_absolute_path_1.getAbsolutePath)(configFileName));
     // we don't want to raise an error if no inputs found in a config file
     // because this error is mostly for CLI, but we'll pass an inputs in createProgram

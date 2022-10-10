@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateDtsBundle = void 0;
+// @ts-ignore
 const ts = require("typescript");
 const path = require("path");
 const compile_dts_1 = require("./compile-dts");
@@ -219,11 +220,13 @@ function updateResult(params, result) {
             result.statements.push(statement);
             continue;
         }
+        // @ts-ignore
         if (ts.isExportAssignment(statement) && statement.isExportEquals && params.currentModule.isExternal) {
             updateResultForExternalEqExportAssignment(statement, params, result);
             continue;
         }
         if (!params.isStatementUsed(statement)) {
+            // @ts-ignore
             (0, logger_1.verboseLog)(`Skip file member: ${statement.getText().replace(/(\n|\r)/g, '').slice(0, 50)}...`);
             continue;
         }
@@ -487,6 +490,7 @@ function isNodeUsed(node, rootFileExports, typesUsageEvaluator, typeChecker) {
         return rootFileExports.some((rootExport) => typesUsageEvaluator.isSymbolUsedBySymbol(nodeSymbol, rootExport));
     }
     else if (ts.isVariableStatement(node)) {
+        // @ts-ignore
         return node.declarationList.declarations.some((declaration) => {
             return isNodeUsed(declaration, rootFileExports, typesUsageEvaluator, typeChecker);
         });

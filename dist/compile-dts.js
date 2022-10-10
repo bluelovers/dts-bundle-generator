@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.compileDts = void 0;
 const path = require("path");
+// @ts-ignore
 const ts = require("typescript");
 const logger_1 = require("./logger");
 const get_compiler_options_1 = require("./get-compiler-options");
@@ -17,6 +18,9 @@ function compileDts(rootFiles, preferredConfigPath, followSymlinks = true) {
     compilerOptions.tsBuildInfoFile = undefined;
     compilerOptions.declarationDir = undefined;
     compilerOptions.removeComments = false;
+    compilerOptions.emitDeclarationOnly = true;
+    compilerOptions.declaration = true;
+    compilerOptions.noEmit = false;
     if (compilerOptions.composite) {
         (0, logger_1.warnLog)(`Composite projects aren't supported at the time. Prefer to use non-composite project to generate declarations instead or just ignore this message if everything works fine. See https://github.com/timocov/dts-bundle-generator/issues/93`);
         compilerOptions.composite = undefined;

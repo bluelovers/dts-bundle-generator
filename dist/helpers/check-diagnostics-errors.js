@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkDiagnosticsErrors = exports.checkProgramDiagnosticsErrors = void 0;
+// @ts-ignore
 const ts = require("typescript");
 const logger_1 = require("../logger");
 const formatDiagnosticsHost = {

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isNamedTupleMember = exports.getExportsForStatement = exports.resolveIdentifier = exports.getExportsForSourceFile = exports.ExportType = exports.getDeclarationsForSymbol = exports.isNamespaceStatement = exports.isDeclareGlobalStatement = exports.isDeclareModule = exports.isAmbientModule = exports.splitTransientSymbol = exports.getDeclarationNameSymbol = exports.getActualSymbol = exports.getNodeName = exports.hasNodeModifier = exports.isNodeNamedDeclaration = void 0;
+// @ts-ignore
 const ts = require("typescript");
 const namedDeclarationKinds = [
     ts.SyntaxKind.InterfaceDeclaration,

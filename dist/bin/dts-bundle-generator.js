@@ -2,6 +2,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const path = require("path");
+// @ts-ignore
 const ts = require("typescript");
 const yargs = require("yargs");
 const load_config_file_1 = require("../config-file/load-config-file");

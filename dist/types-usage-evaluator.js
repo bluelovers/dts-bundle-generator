@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TypesUsageEvaluator = void 0;
+// @ts-ignore
 const ts = require("typescript");
 const typescript_1 = require("./helpers/typescript");
 class TypesUsageEvaluator {
