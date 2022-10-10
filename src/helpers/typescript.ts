@@ -1,3 +1,4 @@
+// @ts-ignore
 import * as ts from 'typescript';
 
 const namedDeclarationKinds = [
