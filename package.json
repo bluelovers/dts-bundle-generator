@@ -1,4 +1,5 @@
 {
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
@@ -20,7 +21,24 @@
   "homepage": "https://github.com/timocov/dts-bundle-generator",
   "dependencies": {
     "tslib": "^2",
-    "yargs": "^17.6.0"
+    "yargs": "^17.5.1"
+  },
+  "devDependencies": {
+    "@bluelovers/tsconfig": "^1.0.30",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^18.7.13",
+    "@types/yargs": "^17.0.11",
+    "@typescript-eslint/eslint-plugin": "^5.35.1",
+    "@typescript-eslint/parser": "^5.35.1",
+    "eslint": "^8.23.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-prefer-arrow": "^1.2.3",
+    "eslint-plugin-unicorn": "^43.0.2",
+    "mocha": "^10.0.0",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^3.0.2",
+    "ts-compiler": "npm:typescript@next",
+    "ts-node": "^10.9.1"
   },
   "peerDependencies": {
     "typescript": ">=3.0.1"
@@ -33,5 +51,20 @@
   },
   "engines": {
     "node": ">=12.0.0"
+  },
+  "scripts": {
+    "clean": "rimraf dist/ dts-out/",
+    "lint": "eslint --format=unix --ext .ts ./",
+    "check-dts-config": "node ./node_modules/ts-compiler/bin/tsc --lib es2015 --allowJs --noEmit ./dts-config.js",
+    "bundle-dts": "npm run check-dts-config && node ./dist/bin/dts-bundle-generator.js --config dts-config.js --silent",
+    "tsc": "node ./node_modules/ts-compiler/bin/tsc --version && node ./node_modules/ts-compiler/bin/tsc -b ./tsconfig.json",
+    "verify": "npm-run-all clean tsc -p bundle-dts lint -s test",
+    "prepare-release": "npm-run-all clean tsc bundle-dts && node scripts/clean-package-json.js",
+    "test": "mocha tests/unittests/**/*.spec.ts tests/e2e/all-test-cases.ts",
+    "postpublish": "yarn run postpublish:changelog && yarn run postpublish:git:commit && yarn run postpublish:git:tag && yarn run postpublish:git:push",
+    "postpublish:changelog": "ynpx --quiet @yarn-tool/changelog && git add ./CHANGELOG.md",
+    "postpublish:git:commit": "git commit -m \"chore(release): publish\" . & echo postpublish:git:commit",
+    "postpublish:git:push": "git push --follow-tags",
+    "postpublish:git:tag": "ynpx --quiet @yarn-tool/tag"
   }
 }

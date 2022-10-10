@@ -1,5 +1,4 @@
 import * as path from 'path';
-// @ts-ignore
 import * as ts from 'typescript';
 
 import { verboseLog, warnLog } from './logger';
@@ -24,9 +23,6 @@ export function compileDts(rootFiles: readonly string[], preferredConfigPath?: s
 	compilerOptions.tsBuildInfoFile = undefined;
 	compilerOptions.declarationDir = undefined;
 	compilerOptions.removeComments = false;
-	compilerOptions.emitDeclarationOnly = true;
-	compilerOptions.declaration = true;
-	compilerOptions.noEmit = false;
 
 	if (compilerOptions.composite) {
 		warnLog(`Composite projects aren't supported at the time. Prefer to use non-composite project to generate declarations instead or just ignore this message if everything works fine. See https://github.com/timocov/dts-bundle-generator/issues/93`);

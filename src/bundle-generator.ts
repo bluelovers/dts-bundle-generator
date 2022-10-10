@@ -1,4 +1,3 @@
-// @ts-ignore
 import * as ts from 'typescript';
 import * as path from 'path';
 
@@ -425,14 +424,12 @@ function updateResult(params: UpdateParams, result: CollectingResult): void {
 			continue;
 		}
 
-		// @ts-ignore
 		if (ts.isExportAssignment(statement) && statement.isExportEquals && params.currentModule.isExternal) {
 			updateResultForExternalEqExportAssignment(statement, params, result);
 			continue;
 		}
 
 		if (!params.isStatementUsed(statement)) {
-			// @ts-ignore
 			verboseLog(`Skip file member: ${statement.getText().replace(/(\n|\r)/g, '').slice(0, 50)}...`);
 			continue;
 		}
@@ -771,7 +768,6 @@ function isNodeUsed(
 
 		return rootFileExports.some((rootExport: ts.Symbol) => typesUsageEvaluator.isSymbolUsedBySymbol(nodeSymbol, rootExport));
 	} else if (ts.isVariableStatement(node)) {
-		// @ts-ignore
 		return node.declarationList.declarations.some((declaration: ts.VariableDeclaration) => {
 			return isNodeUsed(declaration, rootFileExports, typesUsageEvaluator, typeChecker);
 		});
