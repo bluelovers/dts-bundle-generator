@@ -46,6 +46,8 @@ export function getCompilerOptions(inputFileNames: readonly string[], preferredC
 
 	checkDiagnosticsErrors(diagnostics, 'Error while processing tsconfig compiler options');
 
+	compilerOptionsParseResult.options.include = configParseResult.config.include;
+
 	return compilerOptionsParseResult.options;
 }
 

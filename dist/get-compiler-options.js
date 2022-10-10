@@ -35,6 +35,7 @@ function getCompilerOptions(inputFileNames, preferredConfigPath) {
     const diagnostics = compilerOptionsParseResult.errors
         .filter((d) => d.code !== 18003 /* Constants.NoInputsWereFoundDiagnosticCode */);
     (0, check_diagnostics_errors_1.checkDiagnosticsErrors)(diagnostics, 'Error while processing tsconfig compiler options');
+    compilerOptionsParseResult.options.include = configParseResult.config.include;
     return compilerOptionsParseResult.options;
 }
 exports.getCompilerOptions = getCompilerOptions;

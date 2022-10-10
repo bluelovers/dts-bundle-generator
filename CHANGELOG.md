@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.12.2](https://github.com/bluelovers/dts-bundle-generator/compare/@bluelovers/dts-bundle-generator@6.12.1...@bluelovers/dts-bundle-generator@6.12.2) (2022-10-10)
+
+**Note:** Version bump only for package @bluelovers/dts-bundle-generator
+
+
+
+
+
 ## [6.12.1](https://github.com/bluelovers/dts-bundle-generator/compare/@bluelovers/dts-bundle-generator@6.12.0...@bluelovers/dts-bundle-generator@6.12.1) (2022-10-10)
 
 
