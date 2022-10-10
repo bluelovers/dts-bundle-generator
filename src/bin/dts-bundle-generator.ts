@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as path from 'path';
+// @ts-ignore
 import * as ts from 'typescript';
 import * as yargs from 'yargs';
 
@@ -23,7 +24,7 @@ import {
 
 function toStringsArray(data: unknown): string[] | undefined {
 	if (data === undefined) {
-		return data;
+		return data as any;
 	}
 
 	if (!Array.isArray(data)) {
