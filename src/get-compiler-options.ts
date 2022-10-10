@@ -1,3 +1,4 @@
+// @ts-ignore
 import * as ts from 'typescript';
 import * as path from 'path';
 
@@ -23,6 +24,12 @@ export function getCompilerOptions(inputFileNames: readonly string[], preferredC
 
 	const configParseResult = ts.readConfigFile(configFileName, ts.sys.readFile);
 	checkDiagnosticsErrors(configParseResult.error !== undefined ? [configParseResult.error] : [], 'Error while processing tsconfig file');
+
+	configParseResult.config.include ??= [];
+	configParseResult.config.include = [
+		configParseResult.config.include,
+		inputFileNames,
+	].flat().filter(v => (v ?? false) !== false);
 
 	const compilerOptionsParseResult = ts.parseJsonConfigFileContent(
 		configParseResult.config,
