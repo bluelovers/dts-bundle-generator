@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.12.1](https://github.com/bluelovers/dts-bundle-generator/compare/@bluelovers/dts-bundle-generator@6.12.0...@bluelovers/dts-bundle-generator@6.12.1) (2022-10-10)
+
+
+
+### ✨　Features
+
+* avoid error out of entry file ([c006ff1](https://github.com/bluelovers/dts-bundle-generator/commit/c006ff11c9787ad9270cc672b0918469879cbedc))
+
+
+### 🔖　Miscellaneous
+
+* . ([b302626](https://github.com/bluelovers/dts-bundle-generator/commit/b30262634db130da71707bc2869aaabf71d11bb0))
+* . ([123ea43](https://github.com/bluelovers/dts-bundle-generator/commit/123ea43ec24d9e6db0a495770aedb721501c140f))
+* . ([7ddd9f1](https://github.com/bluelovers/dts-bundle-generator/commit/7ddd9f1883f9eccddd6a5c697b364a3e6f6240e0))
+
+
+
 # 6.12.0 (2022-08-29)
 
 
