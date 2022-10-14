@@ -1,6 +1,7 @@
 import * as path from 'path';
 // @ts-ignore
 import * as ts from 'typescript';
+import { ITsconfig } from '@ts-type/package-dts/tsconfig-json';
 
 import { verboseLog, warnLog } from './logger';
 
@@ -14,7 +15,7 @@ export interface CompileDtsResult {
 }
 
 export function compileDts(rootFiles: readonly string[], preferredConfigPath?: string, followSymlinks: boolean = true): CompileDtsResult {
-	const compilerOptions = getCompilerOptions(rootFiles, preferredConfigPath);
+	const compilerOptions = getCompilerOptions(rootFiles, preferredConfigPath) as ITsconfig["compilerOptions"];
 
 	// currently we don't support these compiler options
 	// and removing them shouldn't affect generated code
@@ -27,6 +28,13 @@ export function compileDts(rootFiles: readonly string[], preferredConfigPath?: s
 	compilerOptions.emitDeclarationOnly = true;
 	compilerOptions.declaration = true;
 	compilerOptions.noEmit = false;
+
+	Object.assign(compilerOptions, {
+		"noUnusedParameters": false,
+		"allowUnusedLabels": true,
+		"noUnusedLocals": false,
+		"noPropertyAccessFromIndexSignature": false
+	});
 
 	if (compilerOptions.composite) {
 		warnLog(`Composite projects aren't supported at the time. Prefer to use non-composite project to generate declarations instead or just ignore this message if everything works fine. See https://github.com/timocov/dts-bundle-generator/issues/93`);
