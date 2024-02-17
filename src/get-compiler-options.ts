@@ -24,6 +24,13 @@ export function getCompilerOptions(inputFileNames: readonly string[], preferredC
 	const configParseResult = ts.readConfigFile(configFileName, ts.sys.readFile);
 	checkDiagnosticsErrors(configParseResult.error !== undefined ? [configParseResult.error] : [], 'Error while processing tsconfig file');
 
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+	configParseResult.config.include = [
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+		configParseResult.config.include ?? [],
+		inputFileNames,
+	].flat().filter(v => (v ?? false) !== false);
+
 	const compilerOptionsParseResult = ts.parseJsonConfigFileContent(
 		configParseResult.config,
 		parseConfigHost,
@@ -38,6 +45,9 @@ export function getCompilerOptions(inputFileNames: readonly string[], preferredC
 	const diagnostics = compilerOptionsParseResult.errors.filter((d: ts.Diagnostic) => d.code !== Constants.NoInputsWereFoundDiagnosticCode);
 
 	checkDiagnosticsErrors(diagnostics, 'Error while processing tsconfig compiler options');
+
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+	compilerOptionsParseResult.options.include = configParseResult.config.include;
 
 	return compilerOptionsParseResult.options;
 }
