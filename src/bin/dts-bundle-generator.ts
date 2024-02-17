@@ -139,7 +139,7 @@ function parseArgs(): ParsedArgs {
 		})
 		.option('disable-symlinks-following', {
 			type: 'boolean',
-			default: false,
+			default: true,
 			description: '(EXPERIMENTAL) Disables resolving of symlinks to the original path. See https://github.com/timocov/dts-bundle-generator/issues/39 for more information',
 		})
 		.option('respect-preserve-const-enum', {
