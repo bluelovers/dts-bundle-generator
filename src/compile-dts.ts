@@ -41,6 +41,13 @@ export function compileDts(rootFiles: readonly string[], preferredConfigPath?: s
 	compilerOptions.tsBuildInfoFile = undefined;
 	compilerOptions.declarationDir = undefined;
 
+	compilerOptions.removeComments = false;
+
+	compilerOptions.noUnusedParameters = false;
+	compilerOptions.allowUnusedLabels = true;
+	compilerOptions.noUnusedLocals = false;
+	compilerOptions.noPropertyAccessFromIndexSignature = false;
+
 	if (compilerOptions.composite) {
 		warnLog(`Composite projects aren't supported at the time. Prefer to use non-composite project to generate declarations instead or just ignore this message if everything works fine. See https://github.com/timocov/dts-bundle-generator/issues/93`);
 		compilerOptions.composite = undefined;
