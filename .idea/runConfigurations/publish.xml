@@ -4,6 +4,7 @@
     <command value="publish" />
     <node-interpreter value="project" />
     <node-options value="--enable-source-maps" />
+    <package-manager value="npm" />
     <envs />
     <method v="2">
       <option name="NpmBeforeRunTask" enabled="true">
