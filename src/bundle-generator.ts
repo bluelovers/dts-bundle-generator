@@ -44,6 +44,8 @@ import {
 	warnLog,
 } from './logger';
 import { CollisionsResolver } from './collisions-resolver';
+import { readFileSync } from 'fs';
+import { appendToCollectionResult, findTripleSlashReferences } from './find-triple-slash-references';
 
 export interface CompilationOptions {
 	/**
@@ -100,6 +102,11 @@ export interface OutputOptions {
 	 * This option allows you to disable this behavior so a node will be exported if it is exported from root source file only.
 	 */
 	exportReferencedTypes?: boolean;
+
+	/**
+	 * Allows auto preserve from entry files to the output
+	 */
+	preserveTripleSlashReferences?: boolean;
 }
 
 export interface LibrariesOptions {
@@ -1154,6 +1161,10 @@ export function generateDtsBundle(entries: readonly EntryPointConfig[], options:
 		}
 
 		const renamedAndNotExplicitlyExportedTypes: ts.NamedDeclaration[] = [];
+
+		if (outputOptions.preserveTripleSlashReferences) {
+			appendToCollectionResult(collectionResult, findTripleSlashReferences(readFileSync(entryConfig.filePath)));
+		}
 
 		const output = generateOutput(
 			{
