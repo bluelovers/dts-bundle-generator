@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "@bluelovers/dts-bundle-generator",
-  "version": "9.3.1-dev.2",
+  "version": "9.3.1-dev.3",
   "description": "DTS Bundle Generator",
   "main": "dist/bundle-generator.js",
   "typings": "dist/bundle-generator.d.ts",
