@@ -3,6 +3,12 @@ import { BundlerConfig } from './load-config-file';
 
 export function normalizeEntryPointConfig<T extends EntryPointConfig>(entry: T)
 {
+	entry.libraries ??= {};
+	if (!entry.libraries.allowedTypesLibraries?.length)
+	{
+		entry.libraries.allowedTypesLibraries = void 0
+	}
+
 	entry.output ??= {};
 	entry.output.inlineDeclareGlobals = Boolean(entry.output.inlineDeclareGlobals ?? true);
 	entry.output.noBanner ??= true;
