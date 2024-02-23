@@ -14,6 +14,10 @@ const config = {
 			filePath: './dts-out/config-file/load-config-file.d.ts',
 			outFile: './config-schema.d.ts',
 		},
+		{
+			filePath: './dts-out/config-file/normalize-config.d.ts',
+			outFile: './dist/config-file/normalize-config.d.ts',
+		},
 	],
 };
 

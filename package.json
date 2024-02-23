@@ -52,6 +52,7 @@
     "bundle-dts": "npm run check-dts-config && node ./dist/bin/dts-bundle-generator.js --config dts-config.js --silent",
     "tsc": "node ./node_modules/ts-compiler/bin/tsc --version && node ./node_modules/ts-compiler/bin/tsc -b ./tsconfig.json",
     "verify": "npm-run-all clean tsc -p bundle-dts lint -s test",
+    "prepublishOnly": "npm-run-all clean tsc bundle-dts",
     "prepare-release": "npm-run-all clean tsc bundle-dts && node scripts/clean-package-json.js",
     "test": "mocha --recursive -p --reporter list tests/"
   },
